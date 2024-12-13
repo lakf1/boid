@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Boid Flow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <style>
+        html, body { 
+            margin: 0; 
+            padding: 0;
+            overflow: hidden;
+            background: #000014;
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        canvas { 
+            display: block;
+            width: 100%;
+            height: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        .landing-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 20, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .content-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 32vh;
+        }
+
+        .start-button {
+            padding: 15px 40px;
+            font-size: 24px;
+            background: transparent;
+            color: #fff;
+            border: 2px solid #00ff88;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+        }
+
+        .start-button:hover {
+            background: #00ff88;
+            color: #000014;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+        }
+
+        .title {
+            color: #fff;
+            font-size: 64px;
+            margin-bottom: 35px;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 800;
+            text-shadow: 
+                0 0 10px rgba(0, 255, 136, 0.5),
+                0 0 20px rgba(0, 255, 136, 0.3),
+                0 0 30px rgba(0, 255, 136, 0.2);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        .terminal {
+            width: 600px;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.85);
+            border: 1px solid #00ff88;
+            border-radius: 5px;
+            padding: 0px 20px;
+            margin: 20px;
+            font-family: 'Courier New', monospace;
+            color: #00ff88;
+            font-size: 16px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+        }
+
+        .terminal-text {
+            line-height: 1.5;
+            white-space: pre-line;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        @keyframes glow {
+            0% {
+                text-shadow: 0 0 10px rgba(0, 255, 136, 0.5), 0 0 20px rgba(0, 255, 136, 0.3), 0 0 30px rgba(0, 255, 136, 0.2);
+            }
+            100% {
+                text-shadow: 0 0 20px rgba(0, 255, 136, 0.7), 0 0 30px rgba(0, 255, 136, 0.5), 0 0 40px rgba(0, 255, 136, 0.3);
+            }
+        }
+
+        .coming-soon {
+            color: #00ff88;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 18px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 0.8;
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #00ff88;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 14px;
+            letter-spacing: 1px;
+            opacity: 0.6;
+            white-space: nowrap;
+        }
+
+        .wallet-button {
+            padding: 15px 40px;
+            font-size: 20px;
+            background: transparent;
+            color: #fff;
+            border: 2px solid #00ff88;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            margin-top: 20px;
+        }
+
+        .wallet-button:hover {
+            background: #00ff88;
+            color: #000014;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+        }
+
+        .wallet-status {
+            color: #00ff88;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .wallet-address {
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin-top: 5px;
+            word-break: break-all;
+        }
+
+        .phantom-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: #AB9FF2;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 1000;
+            transition: background-color 0.3s ease;
+        }
+
+        .phantom-button:hover {
+            background: #8A7DD8;
+        }
+
+        .phantom-button img {
+            width: 20px;
+            height: 20px;
+        }
+
+        .wallet-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(171, 159, 242, 0.1);
+            padding: 12px 20px;
+            border-radius: 12px;
+            color: #AB9FF2;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 14px;
+            z-index: 1000;
+        }
+
+        .social-buttons {
+            position: fixed;
+            bottom: 80px; /* Above the copyright footer */
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            z-index: 1001;
+        }
+
+        .social-button {
+            padding: 12px 24px;
+            font-size: 16px;
+            background: transparent;
+            color: #00ff88;
+            border: 1px solid #00ff88;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .social-button:hover {
+            background: rgba(0, 255, 136, 0.1);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .social-button svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        .buy-button {
+            background: rgba(0, 255, 136, 0.1) !important;
+            border: 2px solid #00ff88 !important;
+            font-weight: 700 !important;
+        }
+
+        .buy-button:hover {
+            background: rgba(0, 255, 136, 0.2) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="landing-screen" id="landingScreen">
+        <div class="coming-soon">ca: Coming Soon</div>
+        <div class="content-wrapper">
+            <h1 class="title">boidflow.ai</h1>
+            <div class="terminal" id="terminal" style="display: none;">
+                <div class="terminal-text"></div>
+            </div>
+            <button class="start-button" id="startButton">Start Simulation</button>
+        </div>
+        <div class="social-buttons">
+            <a href="https://twitter.com/boidflow" target="_blank" class="social-button">
+                <svg viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+                Twitter
+            </a>
+            <a href="https://t.me/boidflow" target="_blank" class="social-button">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.62-.52.36-.99.53-1.41.52-.47-.01-1.36-.26-2.02-.48-.82-.27-1.47-.42-1.42-.89.03-.25.39-.51 1.08-.78 4.24-1.84 7.07-3.06 8.48-3.66 4.04-1.71 4.88-2.01 5.42-2.02.12 0 .39.03.56.18.17.14.22.34.24.49.02.14.01.3 0 .35z"/>
+                </svg>
+                Telegram
+            </a>
+            <a href="./docs.html" class="social-button">
+                <svg viewBox="0 0 24 24">
+                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                </svg>
+                Docs
+            </a>
+            <a href="#" class="social-button buy-button">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/>
+                </svg>
+                Buy
+            </a>
+        </div>
+        <div class="footer">Copyright 2024 BoidFlow. All Rights Reserved.</div>
+    </div>
+    <button class="phantom-button" id="walletButton">
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDgiIGhlaWdodD0iMTA4IiB2aWV3Qm94PSIwIDAgMTA4IDEwOCIgZmlsbD0ibm9uZSI+CjxyZWN0IHdpZHRoPSIxMDgiIGhlaWdodD0iMTA4IiByeD0iMjYiIGZpbGw9IiNBQjlGRjIiLz4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik00NS45MTI3IDg2LjI4NDJDNDMuMTM3MyA4Ni4yODQyIDQwLjk2MTkgODQuMTA4OCA0MC45NjE5IDgxLjMzMzRWNzIuNDMxNkgzNi4wMTExQzMzLjIzNTcgNzIuNDMxNiAzMS4wNjAzIDcwLjI1NjIgMzEuMDYwMyA2Ny40ODA4VjQwLjcxNThDMzEuMDYwMyAzNy45NDA0IDMzLjIzNTcgMzUuNzY1IDM2LjAxMTEgMzUuNzY1SDcyLjA5MTNDNzQuODY2NyAzNS43NjUgNzcuMDQyMSAzNy45NDA0IDc3LjA0MjEgNDAuNzE1OFY2Ny40ODA4Qzc3LjA0MjEgNzAuMjU2MiA3NC44NjY3IDcyLjQzMTYgNzIuMDkxMyA3Mi40MzE2SDU5LjgxNDNMNDkuMTYyNyA4NC44Mzk2QzQ4LjMzNjkgODUuNzY1IDQ3LjE2MTkgODYuMjg0MiA0NS45MTI3IDg2LjI4NDJaTTY4LjY0MDYgNDQuNjY2N3g0MC4wMTExQzM4LjYzNTcgNDQuNjY2NyAzNy41MzU3IDQ1Ljc2NjcgMzcuNTM1NyA0Ny4xNDIxQzM3LjUzNTcgNDguNTE3NSAzOC42MzU3IDQ5LjYxNzUgNDAuMDExMSA0OS42MTc1SDY4LjY0MDZDNzAuMDE2IDQ5LjYxNzUgNzEuMTE2IDQ4LjUxNzUgNzEuMTE2IDQ3LjE0MjFDNzEuMTE2IDQ1Ljc2NjcgNzAuMDE2IDQ0LjY2NjcgNjguNjQwNiA0NC42NjY3Wk02MS4xNjUxIDU4LjUxOTJIMzkuOTYxMUMzOC41ODU3IDU4LjUxOTIgMzcuNDg1NyA1OS42MTkyIDM3LjQ4NTcgNjAuOTk0NkMzNy40ODU3IDYyLjM3IDM4LjU4NTcgNjMuNDcgMzkuOTYxMSA2My40N0g2MS4xNjUxQzYyLjU0MDUgNjMuNDcgNjMuNjQwNSA2Mi4zNyA2My42NDA1IDYwLjk5NDZDNjMuNjQwNSA1OS42MTkyIDYyLjU0MDUgNTguNTE5MiA2MS4xNjUxIDU4LjUxOTJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4=" alt="Phantom">
+        Connect Phantom
+    </button>
+    <div class="wallet-info" id="walletInfo" style="display: none;"></div>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+// Add this helper function
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Phantom Wallet Integration
+const walletButton = document.getElementById('walletButton');
+const walletStatus = document.getElementById('walletStatus');
+const walletAddress = document.getElementById('walletAddress');
+const startButton = document.getElementById('startButton');
+
+let walletPublicKey = null;
+
+// Modified getProvider function
+const getProvider = () => {
+    if ('phantom' in window) {
+        const provider = window.phantom?.solana;
+
+        if (provider?.isPhantom) {
+            return provider;
+        }
+    }
+
+    window.open('https://phantom.app/', '_blank');
+    return null;
+};
+
+// Simplified wallet connection function
+async function connectWallet() {
+    try {
+        const provider = getProvider();
+        if (!provider) return;
+
+        const response = await provider.connect();
+        walletPublicKey = response.publicKey.toString();
+        
+        // Update UI
+        document.getElementById('walletButton').style.display = 'none';
+        const walletInfo = document.getElementById('walletInfo');
+        walletInfo.style.display = 'block';
+        walletInfo.innerHTML = `Connected: ${walletPublicKey.slice(0, 4)}...${walletPublicKey.slice(-4)}`;
+
+        // Listen for wallet disconnection
+        provider.on('disconnect', () => {
+            walletPublicKey = null;
+            document.getElementById('walletButton').style.display = 'flex';
+            walletInfo.style.display = 'none';
+        });
+
+        // Listen for account changes
+        provider.on('accountChanged', (publicKey) => {
+            if (publicKey) {
+                walletPublicKey = publicKey.toString();
+                walletInfo.innerHTML = `Connected: ${walletPublicKey.slice(0, 4)}...${walletPublicKey.slice(-4)}`;
+            } else {
+                // Handle disconnected case
+                walletPublicKey = null;
+                document.getElementById('walletButton').style.display = 'flex';
+                walletInfo.style.display = 'none';
+            }
+        });
+
+    } catch (err) {
+        console.error("Wallet connection error:", err);
+    }
+}
+
+// Initialize
+window.onload = async () => {
+    document.getElementById('walletButton').addEventListener('click', connectWallet);
+    
+    // Try to reconnect if already authorized
+    try {
+        const provider = getProvider();
+        if (provider) {
+            const resp = await provider.connect({ onlyIfTrusted: true });
+            if (resp.publicKey) {
+                walletPublicKey = resp.publicKey.toString();
+                document.getElementById('walletButton').style.display = 'none';
+                const walletInfo = document.getElementById('walletInfo');
+                walletInfo.style.display = 'block';
+                walletInfo.innerHTML = `Connected: ${walletPublicKey.slice(0, 4)}...${walletPublicKey.slice(-4)}`;
+            }
+        }
+    } catch (err) {
+        console.error("Auto-connect error:", err);
+    }
+};
+
+// Vector2 class to replace pygame.Vector2
+class Vector2 {
+    constructor(x = 0, y = 0) {
+        this.x = x;
+        this.y = y;
+    }
+
+    add(v) {
+        return new Vector2(this.x + v.x, this.y + v.y);
+    }
+
+    subtract(v) {
+        return new Vector2(this.x - v.x, this.y - v.y);
+    }
+
+    multiply(n) {
+        return new Vector2(this.x * n, this.y * n);
+    }
+
+    divide(n) {
+        return new Vector2(this.x / n, this.y / n);
+    }
+
+    length() {
+        return Math.sqrt(this.x * this.x + this.y * this.y);
+    }
+
+    normalize() {
+        const len = this.length();
+        if (len !== 0) {
+            return this.divide(len);
+        }
+        return new Vector2();
+    }
+
+    distanceTo(v) {
+        const dx = this.x - v.x;
+        const dy = this.y - v.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    scaleTo(length) {
+        const normalized = this.normalize();
+        return normalized.multiply(length);
+    }
+}
+
+// Constants and setup
+const width = window.innerWidth;
+const height = window.innerHeight - 100;
+const uiHeight = 100;
+
+const BOID_COLORS = [
+    '#ff6666', // Light Red
+    '#ffb266', // Light Orange
+    '#ffff66', // Light Yellow
+    '#b2ff66', // Light Green
+    '#66ffb2', // Turquoise
+    '#66b2ff', // Light Blue
+    '#b266ff', // Light Purple
+    '#ff66ff', // Light Pink
+];
+
+// Boid class
+class Boid {
+    constructor() {
+        this.position = new Vector2(
+            Math.random() * width,
+            Math.random() * height
+        );
+        this.velocity = new Vector2(
+            Math.random() * 2 - 1,
+            Math.random() * 2 - 1
+        );
+        this.velocity = this.velocity.scaleTo(Math.random() * 1 + 1);
+        this.acceleration = new Vector2();
+        this.maxForce = 0.02;
+        this.maxSpeed = 2;
+        this.size = 8;
+        this.visionRadius = 100;
+        this.color = BOID_COLORS[Math.floor(Math.random() * BOID_COLORS.length)];
+        this.memory = [];
+        this.memorySize = 50;
+    }
+
+    update() {
+        this.velocity = this.velocity.add(this.acceleration);
+        if (this.velocity.length() > this.maxSpeed) {
+            this.velocity = this.velocity.scaleTo(this.maxSpeed);
+        }
+        this.position = this.position.add(this.velocity);
+        this.acceleration = this.acceleration.multiply(0);
+
+        this.memory.push(new Vector2(this.position.x, this.position.y));
+        if (this.memory.length > this.memorySize) {
+            this.memory.shift();
+        }
+    }
+
+    applyBehaviour(boids, foodPositions, alignmentWeight, cohesionWeight, separationWeight, attractionWeight, boundaryWeight, currentWeight, memoryWeight) {
+        const alignment = this.align(boids);
+        const cohesion = this.cohesion(boids);
+        const separation = this.separation(boids);
+        const attraction = this.attractToFood(foodPositions);
+        const boundaryAvoidance = this.avoidBoundaries();
+        const current = this.applyCurrent();
+        const memory = this.moveAwayFromMemory();
+
+        this.acceleration = this.acceleration.add(alignment.multiply(alignmentWeight))
+            .add(cohesion.multiply(cohesionWeight))
+            .add(separation.multiply(separationWeight))
+            .add(attraction.multiply(attractionWeight))
+            .add(boundaryAvoidance.multiply(boundaryWeight))
+            .add(current.multiply(currentWeight))
+            .add(memory.multiply(memoryWeight));
+    }
+
+    align(boids) {
+        let steering = new Vector2();
+        let total = 0;
+        let avgVec = new Vector2();
+
+        for (const boid of boids) {
+            if (boid !== this && this.position.distanceTo(boid.position) < 50) {
+                avgVec = avgVec.add(boid.velocity);
+                total++;
+            }
+        }
+
+        if (total > 0) {
+            avgVec = avgVec.divide(total);
+            avgVec = avgVec.scaleTo(this.maxSpeed);
+            steering = avgVec.subtract(this.velocity);
+            if (steering.length() > this.maxForce) {
+                steering = steering.scaleTo(this.maxForce);
+            }
+        }
+        return steering;
+    }
+
+    cohesion(boids) {
+        let steering = new Vector2();
+        let total = 0;
+        let centerOfMass = new Vector2();
+
+        for (const boid of boids) {
+            if (boid !== this && this.position.distanceTo(boid.position) < 50) {
+                centerOfMass = centerOfMass.add(boid.position);
+                total++;
+            }
+        }
+
+        if (total > 0) {
+            centerOfMass = centerOfMass.divide(total);
+            const vecToCom = centerOfMass.subtract(this.position);
+            if (vecToCom.length() > 0) {
+                steering = vecToCom.scaleTo(this.maxSpeed).subtract(this.velocity);
+                if (steering.length() > this.maxForce) {
+                    steering = steering.scaleTo(this.maxForce);
+                }
+            }
+        }
+        return steering;
+    }
+
+    separation(boids) {
+        let steering = new Vector2();
+        let total = 0;
+        let avgVector = new Vector2();
+
+        for (const boid of boids) {
+            const distance = this.position.distanceTo(boid.position);
+            if (this !== boid && distance < 25) {
+                let diff = this.position.subtract(boid.position);
+                if (distance > 0) {
+                    diff = diff.divide(distance);
+                }
+                avgVector = avgVector.add(diff);
+                total++;
+            }
+        }
+
+        if (total > 0) {
+            avgVector = avgVector.divide(total);
+            if (avgVector.length() > 0) {
+                avgVector = avgVector.scaleTo(this.maxSpeed);
+                steering = avgVector.subtract(this.velocity);
+                if (steering.length() > this.maxForce) {
+                    steering = steering.scaleTo(this.maxForce);
+                }
+            }
+        }
+        return steering;
+    }
+
+    attractToFood(foodPositions) {
+        let closestFood = null;
+        let minDistance = Infinity;
+
+        for (const food of foodPositions) {
+            const distance = this.position.distanceTo(food);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestFood = food;
+            }
+        }
+
+        if (closestFood) {
+            let attraction = closestFood.subtract(this.position);
+            if (attraction.length() > 0) {
+                attraction = attraction.scaleTo(this.maxSpeed);
+                let steering = attraction.subtract(this.velocity);
+                if (steering.length() > this.maxForce) {
+                    steering = steering.scaleTo(this.maxForce);
+                }
+                return steering;
+            }
+        }
+        return new Vector2();
+    }
+
+    avoidBoundaries() {
+        let steering = new Vector2();
+        
+        if (this.position.x < this.visionRadius) {
+            steering = steering.add(new Vector2(this.maxSpeed, 0));
+        } else if (this.position.x > width - this.visionRadius) {
+            steering = steering.add(new Vector2(-this.maxSpeed, 0));
+        }
+        
+        if (this.position.y < this.visionRadius) {
+            steering = steering.add(new Vector2(0, this.maxSpeed));
+        } else if (this.position.y > height - this.visionRadius) {
+            steering = steering.add(new Vector2(0, -this.maxSpeed));
+        }
+
+        if (steering.length() > 0) {
+            steering = steering.scaleTo(this.maxSpeed);
+            steering = steering.subtract(this.velocity);
+            if (steering.length() > this.maxForce) {
+                steering = steering.scaleTo(this.maxForce);
+            }
+        }
+        return steering;
+    }
+
+    applyCurrent() {
+        const currentStrength = 0.03;
+        const current = new Vector2(
+            Math.sin(this.position.y / 50.0),
+            Math.cos(this.position.x / 50.0)
+        );
+        return current.scaleTo(currentStrength);
+    }
+
+    moveAwayFromMemory() {
+        let steering = new Vector2();
+        
+        for (const memoryPos of this.memory) {
+            const distance = this.position.distanceTo(memoryPos);
+            if (distance < 50) {
+                let diff = this.position.subtract(memoryPos);
+                if (distance > 0) {
+                    diff = diff.divide(distance);
+                }
+                steering = steering.add(diff);
+            }
+        }
+
+        if (steering.length() > 0) {
+            steering = steering.scaleTo(this.maxSpeed);
+            steering = steering.subtract(this.velocity);
+            if (steering.length() > this.maxForce) {
+                steering = steering.scaleTo(this.maxForce);
+            }
+        }
+        return steering;
+    }
+
+    draw(ctx) {
+        // Calculate angle from velocity
+        const angle = Math.atan2(this.velocity.y, this.velocity.x);
+        
+        // Save current context state
+        ctx.save();
+        
+        // Move to boid position and rotate
+        ctx.translate(this.position.x, this.position.y);
+        ctx.rotate(angle);
+        
+        // Draw triangular boid
+        ctx.beginPath();
+        ctx.moveTo(this.size, 0);
+        ctx.lineTo(-this.size / 2, this.size / 2);
+        ctx.lineTo(-this.size / 2, -this.size / 2);
+        ctx.closePath();
+        
+        // Set color and fill
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        
+        // Restore context state
+        ctx.restore();
+    }
+}
+
+// Slider class for UI controls
+class Slider {
+    constructor(x, y, width, height, min, max, value, label) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.min = min;
+        this.max = max;
+        this.value = value;
+        this.label = label;
+        this.dragging = false;
+    }
+
+    draw(ctx) {
+        // Draw slider track (background)
+        ctx.fillStyle = '#2A2A2A';
+        ctx.beginPath();
+        ctx.roundRect(this.x, this.y, this.width, this.height, 5);
+        ctx.fill();
+
+        // Draw filled portion
+        const handlePos = ((this.value - this.min) / (this.max - this.min)) * this.width;
+        const gradient = ctx.createLinearGradient(this.x, this.y, this.x + handlePos, this.y);
+        gradient.addColorStop(0, '#4A4AFF');
+        gradient.addColorStop(1, '#6666FF');
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.roundRect(this.x, this.y, handlePos, this.height, 5);
+        ctx.fill();
+
+        // Draw handle
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.roundRect(this.x + handlePos - 4, this.y - 4, 8, this.height + 8, 4);
+        ctx.fill();
+
+        // Draw label and value with improved typography
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${this.label}: ${this.value.toFixed(2)}`, this.x, this.y - 8);
+    }
+
+    handleMouse(x, y, isDown) {
+        if (isDown && y >= this.y - 10 && y <= this.y + this.height + 10 &&
+            x >= this.x - 10 && x <= this.x + this.width + 10) {
+            this.value = this.min + ((x - this.x) / this.width) * (this.max - this.min);
+            this.value = Math.max(this.min, Math.min(this.max, this.value));
+            return true;
+        }
+        return false;
+    }
+}
+
+// Main game setup
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// Set canvas size
+canvas.width = width;
+canvas.height = height + uiHeight;
+
+// Create boids
+const numBoids = 350;
+const boids = Array.from({ length: numBoids }, () => new Boid());
+
+// Create sliders - adjusted positions and widths for single line
+const sliderWidth = 150; // Made sliders narrower
+const sliderSpacing = 20;
+const sliderY = height + 40; // Centered vertically in the UI area
+
+const sliders = [
+    new Slider(10, sliderY, sliderWidth, 20, 0, 5, 1.0, "Alignment"),
+    new Slider(10 + (sliderWidth + sliderSpacing), sliderY, sliderWidth, 20, 0, 5, 1.0, "Cohesion"),
+    new Slider(10 + (sliderWidth + sliderSpacing) * 2, sliderY, sliderWidth, 20, 0, 5, 1.5, "Separation"),
+    new Slider(10 + (sliderWidth + sliderSpacing) * 3, sliderY, sliderWidth, 20, 0, 5, 1.5, "Attraction"),
+    new Slider(10 + (sliderWidth + sliderSpacing) * 4, sliderY, sliderWidth, 20, 0, 5, 3.0, "Boundary"),
+    new Slider(10 + (sliderWidth + sliderSpacing) * 5, sliderY, sliderWidth, 20, 0, 5, 0.3, "Current"),
+    new Slider(10 + (sliderWidth + sliderSpacing) * 6, sliderY, sliderWidth, 20, 0, 5, 0.5, "Memory")
+];
+
+// Food positions array
+let foodPositions = [];
+
+// Mouse event handlers
+canvas.addEventListener('mousedown', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const canvasX = x * scaleX;
+    const canvasY = y * scaleY;
+
+    if (canvasY < height) {
+        foodPositions.push(new Vector2(canvasX, canvasY));
+    } else {
+        // Only allow one slider to be dragged at a time
+        for (let slider of sliders) {
+            if (slider.handleMouse(canvasX, canvasY, true)) {
+                slider.dragging = true;
+                break; // Exit loop after first slider is grabbed
+            }
+        }
+    }
+});
+
+canvas.addEventListener('mousemove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    
+    // Scale coordinates if canvas is resized by CSS
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const canvasX = x * scaleX;
+    const canvasY = y * scaleY;
+    
+    // Only update the slider that is being dragged
+    sliders.forEach(slider => {
+        if (slider.dragging) {
+            slider.handleMouse(canvasX, canvasY, true);
+        }
+    });
+});
+
+// Add mouseup event handler to release the slider
+canvas.addEventListener('mouseup', () => {
+    sliders.forEach(slider => slider.dragging = false);
+});
+
+// Add mouseleave event handler to prevent slider getting stuck
+canvas.addEventListener('mouseleave', () => {
+    sliders.forEach(slider => slider.dragging = false);
+});
+
+// Pause the simulation initially
+let isSimulationRunning = false;
+
+// Add click handler for the start button
+document.getElementById('startButton').addEventListener('click', async () => {
+    const startButton = document.getElementById('startButton');
+    const terminal = document.getElementById('terminal');
+    const terminalText = terminal.querySelector('.terminal-text');
+    
+    startButton.style.display = 'none';
+    terminal.style.display = 'block';
+
+    // Larger pool of possible loading messages
+    const possibleCommands = [
+        "> Initializing simulation environment...",
+        "> Generating boid models...",
+        "> Calibrating flocking parameters...",
+        "> Loading behavioral algorithms...",
+        "> Preparing spatial partitioning...",
+        "> Optimizing performance vectors...",
+        "> Configuring swarm dynamics...",
+        "> Loading neural patterns...",
+        "> Initializing vector fields...",
+        "> Calculating initial positions...",
+        "> Setting up quantum entanglement...",
+        "> Optimizing path prediction...",
+        "> Synchronizing swarm behavior...",
+        "> Calibrating movement patterns...",
+        "> Loading environmental parameters...",
+        "> Initializing crowd dynamics...",
+        "> Setting up boundary conditions..."
+    ];
+
+    // Function to get random delay between min and max
+    const getRandomDelay = (min, max) => 
+        Math.floor(Math.random() * (max - min + 1) + min);
+
+    // Function to get random items from array
+    const getRandomItems = (arr, count) => {
+        const shuffled = [...arr].sort(() => 0.5 - Math.random());
+        return shuffled.slice(0, count);
+    };
+
+    const typeText = (text) => {
+        return new Promise(resolve => {
+            let i = 0;
+            terminalText.innerHTML += '\n';
+            const interval = setInterval(() => {
+                if (i < text.length) {
+                    terminalText.innerHTML += text[i];
+                    i++;
+                } else {
+                    clearInterval(interval);
+                    resolve();
+                }
+            }, getRandomDelay(15, 25));
+        });
+    };
+
+    try {
+        // Get 5-7 random commands
+        const commandCount = getRandomDelay(3, 4);
+        const selectedCommands = getRandomItems(possibleCommands, commandCount);
+        
+        // Add final "ready" message
+        selectedCommands.push("> Simulation ready!");
+
+        // Execute commands sequence
+        for (const command of selectedCommands) {
+            await typeText(command);
+            await new Promise(resolve => 
+                setTimeout(resolve, getRandomDelay(200, 500))
+            );
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const landingScreen = document.getElementById('landingScreen');
+        landingScreen.style.opacity = '0';
+        landingScreen.style.transition = 'opacity 0.5s ease';
+        
+        setTimeout(() => {
+            landingScreen.style.display = 'none';
+            isSimulationRunning = true;
+            animate(performance.now());
+        }, 500);
+    } catch (error) {
+        console.error('Error during loading sequence:', error);
+    }
+});
+
+// Modify your animate function to only run when simulation is started
+function animate(currentTime) {
+    if (!isSimulationRunning) return;
+    
+    // Clear canvas with semi-transparent background for trail effect
+    ctx.fillStyle = 'rgba(0, 0, 20, 0.25)';  // Black background with alpha for white traces
+    ctx.fillRect(0, 0, width, height);
+
+    // Update and draw boids
+    boids.forEach(boid => {
+        boid.applyBehaviour(
+            boids,
+            foodPositions,
+            sliders[0].value,
+            sliders[1].value,
+            sliders[2].value,
+            sliders[3].value,
+            sliders[4].value,
+            sliders[5].value,
+            sliders[6].value
+        );
+        boid.update();
+        boid.draw(ctx);
+    });
+
+    // Draw food
+    ctx.fillStyle = '#ffffff';
+    foodPositions.forEach(food => {
+        ctx.beginPath();
+        ctx.arc(food.x, food.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    // Remove food that boids have reached
+    foodPositions = foodPositions.filter(food => 
+        !boids.some(boid => boid.position.distanceTo(food) < 5)
+    );
+
+    // Draw UI background
+    ctx.fillStyle = 'rgba(21, 23, 41, 0.8)'; // Dark blue with 80% opacity
+    ctx.fillRect(0, height, width, uiHeight);
+
+    // Draw sliders
+    sliders.forEach(slider => slider.draw(ctx));
+
+    requestAnimationFrame(animate);
+}
+
+// Start animation
+animate();
+
+// Decorative boids for landing screen
+class DecorativeBoid {
+    constructor() {
+        this.position = new Vector2(
+            Math.random() * width,
+            Math.random() * height
+        );
+        this.velocity = new Vector2(
+            Math.random() * 2 - 1,
+            Math.random() * 2 - 1
+        ).scaleTo(0.125);
+        this.size = 8;
+        this.color = BOID_COLORS[Math.floor(Math.random() * BOID_COLORS.length)];
+    }
+
+    update() {
+        this.position = this.position.add(this.velocity);
+        
+        // Wrap around screen edges
+        if (this.position.x < 0) this.position.x = width;
+        if (this.position.x > width) this.position.x = 0;
+        if (this.position.y < 0) this.position.y = height;
+        if (this.position.y > height) this.position.y = 0;
+    }
+
+    draw(ctx) {
+        const angle = Math.atan2(this.velocity.y, this.velocity.x);
+        ctx.save();
+        ctx.translate(this.position.x, this.position.y);
+        ctx.rotate(angle);
+        
+        ctx.beginPath();
+        ctx.moveTo(this.size, 0);
+        ctx.lineTo(-this.size / 2, this.size / 2);
+        ctx.lineTo(-this.size / 2, -this.size / 2);
+        ctx.closePath();
+        
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        
+        ctx.restore();
+    }
+}
+
+// Create decorative boids
+const decorativeBoids = Array.from({ length: 20 }, () => new DecorativeBoid());
+
+// Animate decorative boids
+function animateDecorative() {
+    if (!isSimulationRunning) {
+        // Clear canvas with lighter fade effect
+        ctx.fillStyle = 'rgba(0, 0, 20, 0.1)';
+        ctx.fillRect(0, 0, width, height + uiHeight);
+
+        // Update and draw decorative boids
+        decorativeBoids.forEach(boid => {
+            boid.update();
+            boid.draw(ctx);
+        });
+
+        requestAnimationFrame(animateDecorative);
+    }
+}
+
+// Start decorative animation immediately
+animateDecorative();
+    </script>
+</body>
+</html>
